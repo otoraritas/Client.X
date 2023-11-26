@@ -1,0 +1,55 @@
+import http.server
+import socketserver
+import os
+import subprocess
+import psutil
+import time
+from termcolor import colored
+from pyfiglet import Figlet
+
+os.system("clear")
+
+figlet = Figlet(font='slant')
+print(colored(figlet.renderText('WEB-SERVER'), 'green'))
+
+web_dir = input(colored("Enter the location of the web directory: ", "yellow"))
+os.chdir(web_dir)
+
+php_server_cmd = f'php -S 0.0.0.0:8000'
+php_process = subprocess.Popen(php_server_cmd, shell=True)
+
+class CustomRequestHandler(http.server.SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        super().end_headers()
+
+Handler = CustomRequestHandler
+httpd = socketserver.TCPServer(("", 8000), Handler)
+
+ram_capacity_gb = 500000000000000000000
+storage_capacity_gb = 500000000000000000000
+
+try:
+    while True:
+        ram_usage_gb = psutil.virtual_memory().used / (1024 ** 3)
+        storage_usage_gb = psutil.disk_usage(web_dir).used / (1024 ** 3)
+
+        print(colored(f"RAM Usage: {ram_usage_gb:.2f} GB / {ram_capacity_gb} GB", "blue"))
+        print(colored(f"Storage Usage: {storage_usage_gb:.2f} GB / {storage_capacity_gb} GB", "red"))
+
+        ram_capacity_gb -= 2
+        storage_capacity_gb -= 2
+
+        time.sleep(120)
+
+        if ram_capacity_gb <= 0 or storage_capacity_gb <= 0:
+            print(colored("Out of resources. Stopping servers.", "red"))
+            break
+
+except KeyboardInterrupt:
+    print("\nServer stopped by the user.")
+
+finally:
+    httpd.server_close()
+    php_process.kill()
+    php_process.wait()
